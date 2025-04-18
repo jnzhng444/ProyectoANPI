@@ -2,6 +2,29 @@ import sympy as sp
 import numpy as np
 import time
 
+# Constantes físicas
+e = 1.602e-19       # Carga elemental (C)
+k = 1.38e-23        # Constante de Boltzmann (J/K)
+T = 298             # Temperatura ambiente (K)
+epsilon_0 = 8.854e-12  # F/m
+epsilon_r = 78.5       # Agua a 25°C
+epsilon = epsilon_r * epsilon_0
+
+# Parámetros del modelo
+rho_0 = 1e3 * e     # C/m³, densidad de carga típica
+h = 1e-9            # paso de malla pequeño (1 nm)
+
+# Constantes A y B
+A_val = (rho_0 * h**2) / epsilon
+B_val = e / (k * T)
+
+# Reescribimos la ecuación como f(phi) = phi - A * exp(-B * phi)
+phi = sp.symbols('x')  # Usamos x para mantener coherencia con tu código
+f_expr = phi - A_val * sp.exp(-B_val * phi)
+
+#Se convierte f_expr a string
+f_str = str(f_expr)
+
 # Método de Bisección
 def biseccion(f1, a, b, tol, iterMax):
     # Convierte la cadena de texto de la función en una función simbólica
@@ -223,17 +246,61 @@ def dekker_method(f, a, b, tol, iterMax):
     execution_time = end_time - start_time
     return s, abs(fs), iterMax, execution_time
 
+
+def chebyshev_method(f, x0, tol, iterMax):
+    # Definir la variable simbólica
+    x = sp.symbols('x')
+
+    # Función simbólica y sus derivadas
+    fs = sp.sympify(f)
+    fsp = sp.diff(fs, x)
+    fspp = sp.diff(fsp, x)
+
+    # Convertir las funciones simbólicas a funciones numéricas
+    fn = sp.lambdify(x, fs, 'numpy')
+    fnp = sp.lambdify(x, fsp, 'numpy')
+    fnpp = sp.lambdify(x, fspp, 'numpy')
+
+    # Inicializar el valor inicial
+    xk = x0
+
+    start_time = time.time()  # Iniciar tiempo
+
+    for k in range(1, iterMax + 1):
+        fx = fn(xk)
+        fpx = fnp(xk)
+        fppx = fnpp(xk)
+
+        if fpx == 0:
+            raise ValueError("La derivada es cero. El método no puede continuar.")
+
+        # Fórmula de Chebyshev
+        xk_new = xk - (fx / fpx) * (1 + (fx * fppx) / (2 * fpx**2))
+
+        # Calcular error
+        error = max(abs(fn(xk_new)), abs(xk_new - xk))
+
+        if error < tol:
+            end_time = time.time()
+            return xk_new, error, k, end_time - start_time
+
+        xk = xk_new
+
+    end_time = time.time()
+    return xk, error, iterMax, end_time - start_time
+
+
 # Parámetros iniciales para todos los métodos
-x0 = 1.0  # Primera aproximación
-x1 = 2.0  # Segunda aproximación
-a = 1  # Para el método de bisección
-b = 3  # Para el método de bisección
+x0 = 0.1  # Primera aproximación
+x1 = 0.5  # Segunda aproximación
+a = 0.01  # Para el método de bisección
+b = 1  # Para el método de bisección
 tol = 1e-6  # Tolerancia
 iterMax = 20000  # Número máximo de iteraciones
 
 # Ejecución de los métodos y mostrar resultados
 print("Método de Bisección:")
-x_biseccion, error_biseccion, k_biseccion, exec_time_biseccion = biseccion('x**2 - 4', a, b, tol, iterMax)
+x_biseccion, error_biseccion, k_biseccion, exec_time_biseccion = biseccion(f_str, a, b, tol, iterMax)
 print(f"Valores iniciales: a = {a}, b = {b}")
 print(f"Aproximación xk: {x_biseccion}")
 print(f"Error ek: {error_biseccion}")
@@ -241,7 +308,7 @@ print(f"Iteraciones k: {k_biseccion}")
 print(f"Tiempo de ejecución: {exec_time_biseccion:.6f} segundos\n")
 
 print("Método de Newton-Raphson:")
-x_newton, error_newton, k_newton, exec_time_newton = newton_raphson('x**2 - 4', x0, tol, iterMax)
+x_newton, error_newton, k_newton, exec_time_newton = newton_raphson(f_str, x0, tol, iterMax)
 print(f"Valores iniciales: x0 = {x0}")
 print(f"Aproximación xk: {x_newton}")
 print(f"Error ek: {error_newton}")
@@ -249,7 +316,7 @@ print(f"Iteraciones k: {k_newton}")
 print(f"Tiempo de ejecución: {exec_time_newton:.6f} segundos\n")
 
 print("Método de la Secante:")
-root_secante, num_iterations_secante, error_secante, exec_time_secante = secante('x**2 - 4', x0, x1, tol, iterMax)
+root_secante, num_iterations_secante, error_secante, exec_time_secante = secante(f_str, x0, x1, tol, iterMax)
 print(f"Valores iniciales: x0 = {x0}, x1 = {x1}")
 print(f"Aproximación xk: {root_secante}")
 print(f"Error ek: {error_secante}")
@@ -257,7 +324,7 @@ print(f"Iteraciones k: {num_iterations_secante}")
 print(f"Tiempo de ejecución: {exec_time_secante:.6f} segundos\n")
 
 print("Método de Halley:")
-x_halley, error_halley, k_halley, exec_time_halley = halley_method('x**2 - 4', x0, tol, iterMax)
+x_halley, error_halley, k_halley, exec_time_halley = halley_method(f_str, x0, tol, iterMax)
 print(f"Valores iniciales: x0 = {x0}")
 print(f"Aproximación xk: {x_halley}")
 print(f"Error ek: {error_halley}")
@@ -265,9 +332,17 @@ print(f"Iteraciones k: {k_halley}")
 print(f"Tiempo de ejecución: {exec_time_halley:.6f} segundos\n")
 
 print("Método de Dekker:")
-root_dekker, error_dekker, iterations_dekker, exec_time_dekker = dekker_method('x**2 -4', a, b, tol, iterMax)
+root_dekker, error_dekker, iterations_dekker, exec_time_dekker = dekker_method(f_str, a, b, tol, iterMax)
 print(f"Valores iniciales: a = {a}, b = {b}")
 print(f"Aproximación xk: {root_dekker}")
 print(f"Error ek: {error_dekker}")
 print(f"Iteraciones k: {iterations_dekker}")
 print(f"Tiempo de ejecución: {exec_time_dekker:.6f} segundos\n")
+
+print("Método de Chebyshev:")
+x_chebyshev, error_chebyshev, k_chebyshev, exec_time_chebyshev = chebyshev_method(f_str, x0, tol, iterMax)
+print(f"Valores iniciales: x0 = {x0}")
+print(f"Aproximación xk: {x_chebyshev}")
+print(f"Error ek: {error_chebyshev}")
+print(f"Iteraciones k: {k_chebyshev}")
+print(f"Tiempo de ejecución: {exec_time_chebyshev:.6f} segundos\n")
