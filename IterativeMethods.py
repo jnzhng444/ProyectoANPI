@@ -293,8 +293,8 @@ def chebyshev_method(f, x0, tol, iterMax):
 # Parámetros iniciales para todos los métodos
 x0 = 0.1  # Primera aproximación
 x1 = 0.5  # Segunda aproximación
-a = 0.01  # Para el método de bisección
-b = 1  # Para el método de bisección
+a = -2000  # Para el método de bisección
+b = 2000  # Para el método de bisección
 tol = 1e-6  # Tolerancia
 iterMax = 20000  # Número máximo de iteraciones
 
