@@ -19,283 +19,205 @@ A_val = (rho_0 * h**2) / epsilon
 B_val = e / (k * T)
 
 # Reescribimos la ecuación como f(phi) = phi - A * exp(-B * phi)
-phi = sp.symbols('x')  # Usamos x para mantener coherencia con tu código
+phi = sp.symbols('x')  # Usamos x
 f_expr = phi - A_val * sp.exp(-B_val * phi)
 
 #Se convierte f_expr a string
 f_str = str(f_expr)
 
-# Método de Bisección
+#Metodo biseccion
 def biseccion(f1, a, b, tol, iterMax):
-    # Convierte la cadena de texto de la función en una función simbólica
-    x = sp.symbols('x')
-    f = sp.lambdify(x, f1, 'numpy')
+    x = sp.symbols('x')  # Declara una variable simbólica 'x'.
+    f = sp.lambdify(x, f1, 'numpy')  # Convierte la función simbólica a una función numérica compatible con NumPy.
 
-    # Comprobamos si el teorema de Bolzano se cumple (es decir, si hay un cambio de signo)
+    # Verifica que exista un cambio de signo en el intervalo (Teorema de Bolzano).
     if f(a) * f(b) < 0:
-        start_time = time.time()  # Iniciar tiempo de ejecución
+        start_time = time.perf_counter()  # Inicia el contador de tiempo.
+
         for k in range(1, iterMax + 1):
-            # Paso 2: Calcula el punto medio
-            x_ = (a + b) / 2
-            # Paso 3: Selecciona el subintervalo
+            x_ = (a + b) / 2  # Calcula el punto medio del intervalo.
+
+            # Selecciona el subintervalo que contiene la raíz.
             if f(a) * f(x_) < 0:
                 b = x_
             else:
                 a = x_
 
-            # Calcular el error
-            error = abs(f(x_))
+            error = abs(f(x_))  # Calcula el error actual (valor absoluto de f(x_)).
 
-            # Paso 4: Si el error es menor que la tolerancia, se detiene
+            # Si el error es menor que la tolerancia, retorna la solución.
             if error < tol:
-                end_time = time.time()  # Finalizar tiempo de ejecución
-                execution_time = end_time - start_time
-                return x_, error, k, execution_time
+                end_time = time.perf_counter()  # Finaliza el contador.
+                return x_, error, k, end_time - start_time
 
-        else:
-            # Si no se alcanza la tolerancia después de iterMax iteraciones
-            print(f"No se alcanzó la tolerancia en {iterMax} iteraciones.")
-            return None, None, None, None
+        # Si no converge en iterMax iteraciones, retorna None.
+        print(f"No se alcanzó la tolerancia en {iterMax} iteraciones.")
+        return None, None, None, None
     else:
-        print("No cumple el teorema de Bolzano")
+        print("No cumple el teorema de Bolzano")  # Si no hay cambio de signo.
         return None, None, None, None
 
 
-# Método de Newton-Raphson
+# Newton-Raphson
 def newton_raphson(f, x0, tol, iterMax):
-    # Definir la variable simbólica
-    x = sp.symbols('x')
+    x = sp.symbols('x')  # Declara variable simbólica.
+    fs = sp.sympify(f)  # Interpreta la función f como expresión simbólica.
+    fsp = sp.diff(fs, x)  # Calcula la derivada de la función.
 
-    # Función simbólica
-    fs = sp.sympify(f)
-
-    # Derivada simbólica de la función
-    fsp = sp.diff(fs, x)
-
-    # Convertir las funciones simbólicas a funciones numéricas
+    # Convierte función y derivada a versión numérica.
     fn = sp.lambdify(x, fs, 'numpy')
     fnp = sp.lambdify(x, fsp, 'numpy')
 
-    # Inicializar el valor de xk
-    xk = x0
+    xk = x0  # Inicializa la variable con la primera aproximación.
+    start_time = time.perf_counter()
 
-    start_time = time.time()  # Iniciar tiempo de ejecución
-
-    # Realizar el método de Newton-Raphson
     for k in range(1, iterMax + 1):
         if fnp(xk) == 0:
-            raise ValueError("La derivada es cero. El método no puede continuar.")
+            raise ValueError("La derivada es cero.")  # Evita división por cero.
 
-        # Actualización de xk
-        xk_new = xk - fn(xk) / fnp(xk)
+        xk_new = xk - fn(xk) / fnp(xk)  # Aplica la fórmula de Newton-Raphson.
+        error = max(abs(fn(xk_new)), abs(xk_new - xk))  # Calcula el error.
 
-        # Calcular el error
-        error = max(abs(fn(xk_new)), abs(xk_new - xk))
-
-        # Si el error es menor que la tolerancia, detener el bucle
         if error < tol:
-            end_time = time.time()  # Finalizar tiempo de ejecución
-            execution_time = end_time - start_time
-            return xk_new, error, k, execution_time
+            end_time = time.perf_counter()
+            return xk_new, error, k, end_time - start_time
 
-        xk = xk_new
+        xk = xk_new  # Actualiza la variable para la próxima iteración.
 
-    end_time = time.time()  # Finalizar tiempo de ejecución
-    execution_time = end_time - start_time
-    return xk, error, iterMax, execution_time
+    end_time = time.perf_counter()
+    return xk, error, iterMax, end_time - start_time
 
+
+# Método de la Secante
 def secante(f, x0, x1, tol, iterMax):
-    # Definir la variable simbólica
-    x = sp.symbols('x')
+    x = sp.symbols('x') # Declara una variable simbólica.
+    fs = sp.sympify(f) # Convierte la función f (string) a expresión simbólica.
+    fn = sp.lambdify(x, fs, 'numpy') # Convierte la función simbólica a función numérica con NumPy.
 
-    # Función simbólica
-    fs = sp.sympify(f)
-
-    # Convertir la función simbólica a función numérica
-    fn = sp.lambdify(x, fs, 'numpy')
-
-    # Inicializar los valores iniciales de x0, x1
-    start_time = time.time()  # Iniciar tiempo de ejecución
+    start_time = time.perf_counter() # Inicia el cronómetro de alta precisión.
 
     for k in range(1, iterMax + 1):
-        # Evaluar la función en x0 y x1
-        f_x0 = fn(x0)
-        f_x1 = fn(x1)
+        f_x0 = fn(x0) # Evalúa la función en x0.
+        f_x1 = fn(x1) # Evalúa la función en x1.
+        denominator = f_x1 - f_x0 # Calcula el denominador de la fórmula de la secante.
 
-        # Evitar la división por cero
-        denominator = f_x1 - f_x0
-        if denominator == 0:
-            raise ValueError(f"División por cero detectada en la iteración {k}.")
+        if denominator == 0: # Evita división por cero.
+            raise ValueError(f"División por cero en la iteración {k}.")
 
-        # Aplicar la fórmula del método de la secante
-        xk_new = x1 - (f_x1 * (x1 - x0)) / denominator
+        xk_new = x1 - (f_x1 * (x1 - x0)) / denominator # Aplica la fórmula de la secante.
+        error = max(abs(fn(xk_new)), abs(xk_new - x1)) # Calcula el error como máximo entre f(x) y |x_n+1 - x_n|.
 
-        # Calcular el error
-        error = max(abs(fn(xk_new)), abs(xk_new - x1))
+        if error < tol: # Si el error es suficientemente pequeño, termina.
+            end_time = time.perf_counter()
+            return xk_new, error, k, end_time - start_time
 
-        # Comprobar si el error es menor que la tolerancia
-        if error < tol:
-            end_time = time.time()  # Finalizar tiempo de ejecución
-            execution_time = end_time - start_time
-            return xk_new, error, k, execution_time
-
-        # Actualizar las aproximaciones para la siguiente iteración
-        x0 = x1
+        x0 = x1 # Actualiza x0 y x1 para la siguiente iteración.
         x1 = xk_new
 
-    end_time = time.time()  # Finalizar tiempo de ejecución
-    execution_time = end_time - start_time
-    return xk_new, error, iterMax, execution_time
+    end_time = time.perf_counter() # Finaliza el cronómetro si se alcanza el límite de iteraciones.
+    return xk_new, error, iterMax, end_time - start_time
 
 
+# Halley
 def halley_method(f, x0, tol, iterMax):
-    # Definir la variable simbólica
     x = sp.symbols('x')
+    fs = sp.sympify(f) # Convierte la función a expresión simbólica.
+    fsp = sp.diff(fs, x) # Calcula la primera derivada.
+    fspp = sp.diff(fsp, x) # Calcula la segunda derivada.
 
-    # Función simbólica
-    fs = sp.sympify(f)
-
-    # Derivadas simbólicas de la función (primera y segunda derivada)
-    fsp = sp.diff(fs, x)
-    fspp = sp.diff(fsp, x)
-
-    # Convertir las funciones simbólicas a funciones numéricas
+    # Convierte las funciones simbólicas a funciones numéricas.
     fn = sp.lambdify(x, fs, 'numpy')
     fnp = sp.lambdify(x, fsp, 'numpy')
     fnpp = sp.lambdify(x, fspp, 'numpy')
 
-    # Inicializar el valor de xk
-    xk = x0
+    xk = x0  # Inicializa la variable con la primera aproximación.
+    start_time = time.perf_counter()
 
-    start_time = time.time()  # Iniciar tiempo de ejecución
-
-    # Realizar el método de Halley (fórmula simplificada)
     for k in range(1, iterMax + 1):
-        if fnp(xk) == 0:
-            raise ValueError("La derivada es cero. El método no puede continuar.")
+        if fnp(xk) == 0: # Verifica que la derivada no sea cero.
+            raise ValueError("Derivada cero.")
 
-        # Actualización de xk usando la fórmula simplificada de Halley
-        xk_new = xk - (fn(xk) / fnp(xk)) * (1 / (1 - (fn(xk) * fnpp(xk)) / (2 * (fnp(xk)) ** 2)))
-
-        # Calcular el error
+        # Aplica la fórmula del método de Halley.
+        xk_new = xk - (fn(xk) / fnp(xk)) * (1 / (1 - (fn(xk) * fnpp(xk)) / (2 * fnp(xk)**2)))
         error = max(abs(fn(xk_new)), abs(xk_new - xk))
 
-        # Si el error es menor que la tolerancia, detener el bucle
         if error < tol:
-            end_time = time.time()  # Finalizar tiempo de ejecución
-            execution_time = end_time - start_time
-            return xk_new, error, k, execution_time
+            end_time = time.perf_counter()
+            return xk_new, error, k, end_time - start_time
 
-        xk = xk_new
+        xk = xk_new # Actualiza xk para la siguiente iteración.
 
-    end_time = time.time()  # Finalizar tiempo de ejecución
-    execution_time = end_time - start_time
-    return xk, error, iterMax, execution_time
+    end_time = time.perf_counter()
+    return xk, error, iterMax, end_time - start_time
 
 
+# Dekker
 def dekker_method(f, a, b, tol, iterMax):
-    # Definir la variable simbólica
     x = sp.symbols('x')
+    fs = sp.sympify(f) # Convierte la función de entrada a expresión simbólica.
+    fn = sp.lambdify(x, fs, 'numpy') # Función numérica.
 
-    # Función simbólica
-    fs = sp.sympify(f)
-
-    # Derivada simbólica de la función
-    fsp = sp.diff(fs, x)
-
-    # Convertir las funciones simbólicas a funciones numéricas
-    fn = sp.lambdify(x, fs, 'numpy')
-
-    # Inicializar el valor de a y b
     fa = fn(a)
     fb = fn(b)
 
-    if fa * fb >= 0:
-        raise ValueError("No hay cambio de signo en el intervalo [a, b]. El método no puede continuar.")
+    if fa * fb >= 0:# Verifica que exista un cambio de signo (Bolzano).
+        raise ValueError("No hay cambio de signo.")
 
-    start_time = time.time()  # Iniciar tiempo de ejecución
+    start_time = time.perf_counter()
 
-    # Realizar el método de Dekker
     for k in range(1, iterMax + 1):
-        # Paso de la secante
-        s = b - fb * (b - a) / (fb - fa)
+        s = b - fb * (b - a) / (fb - fa)# Intenta usar el paso de la secante.
 
-        # Si la secante es válida y está en el intervalo
         if a < s < b:
-            fs = fn(s)
-            # Si el error es menor que la tolerancia, detener el bucle
-            if abs(fs) < tol:
-                end_time = time.time()  # Finalizar tiempo de ejecución
-                execution_time = end_time - start_time
-                return s, abs(fs), k, execution_time
-
-        # Si la secante no es válida, usar bisección
+            fs_val = fn(s)# Evalúa f en s.
+            if abs(fs_val) < tol: # Si el error es pequeño, termina.
+                end_time = time.perf_counter()
+                return s, abs(fs_val), k, end_time - start_time
         else:
-            s = (a + b) / 2
-            fs = fn(s)
+            s = (a + b) / 2 # Si el paso de secante no es válido, hace bisección.
+            fs_val = fn(s)
 
-        # Actualizar el intervalo
-        if fa * fs < 0:
-            b = s
-            fb = fs
+        if fa * fs_val < 0:# Actualiza el intervalo dependiendo del signo.
+            b, fb = s, fs_val
         else:
-            a = s
-            fa = fs
+            a, fa = s, fs_val
 
-    end_time = time.time()  # Finalizar tiempo de ejecución
-    execution_time = end_time - start_time
-    return s, abs(fs), iterMax, execution_time
+    end_time = time.perf_counter()
+    return s, abs(fs_val), iterMax, end_time - start_time
 
-
+# Chebyshev
 def chebyshev_method(f, x0, tol, iterMax):
-    # Definir la variable simbólica
     x = sp.symbols('x')
-
-    # Función simbólica y sus derivadas
+    #Calculo de derivadas
     fs = sp.sympify(f)
     fsp = sp.diff(fs, x)
     fspp = sp.diff(fsp, x)
-
-    # Convertir las funciones simbólicas a funciones numéricas
+    #Se pasa a numerico
     fn = sp.lambdify(x, fs, 'numpy')
     fnp = sp.lambdify(x, fsp, 'numpy')
     fnpp = sp.lambdify(x, fspp, 'numpy')
-
-    # Inicializar el valor inicial
     xk = x0
-
-    start_time = time.time()  # Iniciar tiempo
-
+    start_time = time.perf_counter()
     for k in range(1, iterMax + 1):
-        fx = fn(xk)
-        fpx = fnp(xk)
-        fppx = fnpp(xk)
-
-        if fpx == 0:
-            raise ValueError("La derivada es cero. El método no puede continuar.")
-
-        # Fórmula de Chebyshev
-        xk_new = xk - (fx / fpx) * (1 + (fx * fppx) / (2 * fpx**2))
-
-        # Calcular error
-        error = max(abs(fn(xk_new)), abs(xk_new - xk))
-
-        if error < tol:
-            end_time = time.time()
-            return xk_new, error, k, end_time - start_time
-
-        xk = xk_new
-
-    end_time = time.time()
+        fx, fpx, fppx = fn(xk), fnp(xk), fnpp(xk)
+        if fpx == 0: #Verifica que no sea cero
+            raise ValueError("Derivada cero.")
+        xk_new = xk - (fx / fpx) * (1 + (fx * fppx) / (2 * fpx**2)) # Se calcula la nueva aproximación
+        error = max(abs(fn(xk_new)), abs(xk_new - xk))  # Se calcula el error entre iteraciones
+        if error < tol:  # Si se cumple el criterio de tolerancia
+            end_time = time.perf_counter() # Se detiene el cronómetro
+            return xk_new, error, k, end_time - start_time # Se retorna la raíz, error, iteraciones y tiempo
+        xk = xk_new # Se actualiza xk para la siguiente iteración
+    end_time = time.perf_counter() # Si no converge, se detiene el cronómetro al final del bucle
     return xk, error, iterMax, end_time - start_time
 
 
 # Parámetros iniciales para todos los métodos
 x0 = 0.1  # Primera aproximación
 x1 = 0.5  # Segunda aproximación
-a = -2000  # Para el método de bisección
-b = 2000  # Para el método de bisección
-tol = 1e-6  # Tolerancia
+a = -10  # Para el método de bisección y dekker
+b = 20  # Para el método de bisección y dekker
+tol = 1e-15  # Tolerancia
 iterMax = 20000  # Número máximo de iteraciones
 
 # Ejecución de los métodos y mostrar resultados
@@ -305,7 +227,8 @@ print(f"Valores iniciales: a = {a}, b = {b}")
 print(f"Aproximación xk: {x_biseccion}")
 print(f"Error ek: {error_biseccion}")
 print(f"Iteraciones k: {k_biseccion}")
-print(f"Tiempo de ejecución: {exec_time_biseccion:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_biseccion * 1e6:.3f} microsegundos\n")
+
 
 print("Método de Newton-Raphson:")
 x_newton, error_newton, k_newton, exec_time_newton = newton_raphson(f_str, x0, tol, iterMax)
@@ -313,15 +236,15 @@ print(f"Valores iniciales: x0 = {x0}")
 print(f"Aproximación xk: {x_newton}")
 print(f"Error ek: {error_newton}")
 print(f"Iteraciones k: {k_newton}")
-print(f"Tiempo de ejecución: {exec_time_newton:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_newton * 1e6:.3f} microsegundos\n")
 
 print("Método de la Secante:")
-root_secante, num_iterations_secante, error_secante, exec_time_secante = secante(f_str, x0, x1, tol, iterMax)
+root_secante, error_secante, num_iterations_secante, exec_time_secante = secante(f_str, x0, x1, tol, iterMax)
 print(f"Valores iniciales: x0 = {x0}, x1 = {x1}")
 print(f"Aproximación xk: {root_secante}")
 print(f"Error ek: {error_secante}")
 print(f"Iteraciones k: {num_iterations_secante}")
-print(f"Tiempo de ejecución: {exec_time_secante:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_secante * 1e6:.3f} microsegundos\n")
 
 print("Método de Halley:")
 x_halley, error_halley, k_halley, exec_time_halley = halley_method(f_str, x0, tol, iterMax)
@@ -329,7 +252,7 @@ print(f"Valores iniciales: x0 = {x0}")
 print(f"Aproximación xk: {x_halley}")
 print(f"Error ek: {error_halley}")
 print(f"Iteraciones k: {k_halley}")
-print(f"Tiempo de ejecución: {exec_time_halley:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_halley * 1e6:.3f} microsegundos\n")
 
 print("Método de Dekker:")
 root_dekker, error_dekker, iterations_dekker, exec_time_dekker = dekker_method(f_str, a, b, tol, iterMax)
@@ -337,7 +260,7 @@ print(f"Valores iniciales: a = {a}, b = {b}")
 print(f"Aproximación xk: {root_dekker}")
 print(f"Error ek: {error_dekker}")
 print(f"Iteraciones k: {iterations_dekker}")
-print(f"Tiempo de ejecución: {exec_time_dekker:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_dekker * 1e6:.3f} microsegundos\n")
 
 print("Método de Chebyshev:")
 x_chebyshev, error_chebyshev, k_chebyshev, exec_time_chebyshev = chebyshev_method(f_str, x0, tol, iterMax)
@@ -345,4 +268,5 @@ print(f"Valores iniciales: x0 = {x0}")
 print(f"Aproximación xk: {x_chebyshev}")
 print(f"Error ek: {error_chebyshev}")
 print(f"Iteraciones k: {k_chebyshev}")
-print(f"Tiempo de ejecución: {exec_time_chebyshev:.6f} segundos\n")
+print(f"Tiempo de ejecución: {exec_time_chebyshev * 1e6:.3f} microsegundos\n")
+
