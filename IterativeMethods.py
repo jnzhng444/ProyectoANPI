@@ -215,8 +215,10 @@ def chebyshev_method(f, x0, tol, iterMax):
 # Parámetros iniciales para todos los métodos
 x0 = 0.1  # Primera aproximación
 x1 = 0.5  # Segunda aproximación
-a = -10  # Para el método de bisección y dekker
-b = 20  # Para el método de bisección y dekker
+a = -15  # Para el método de bisección y dekker
+b = 15  # Para el método de bisección y dekker
+c = -10
+d= 20
 tol = 1e-15  # Tolerancia
 iterMax = 20000  # Número máximo de iteraciones
 
@@ -255,8 +257,8 @@ print(f"Iteraciones k: {k_halley}")
 print(f"Tiempo de ejecución: {exec_time_halley * 1e6:.3f} microsegundos\n")
 
 print("Método de Dekker:")
-root_dekker, error_dekker, iterations_dekker, exec_time_dekker = dekker_method(f_str, a, b, tol, iterMax)
-print(f"Valores iniciales: a = {a}, b = {b}")
+root_dekker, error_dekker, iterations_dekker, exec_time_dekker = dekker_method(f_str, c, d, tol, iterMax)
+print(f"Valores iniciales: a = {c}, b = {d}")
 print(f"Aproximación xk: {root_dekker}")
 print(f"Error ek: {error_dekker}")
 print(f"Iteraciones k: {iterations_dekker}")
@@ -269,4 +271,3 @@ print(f"Aproximación xk: {x_chebyshev}")
 print(f"Error ek: {error_chebyshev}")
 print(f"Iteraciones k: {k_chebyshev}")
 print(f"Tiempo de ejecución: {exec_time_chebyshev * 1e6:.3f} microsegundos\n")
-
